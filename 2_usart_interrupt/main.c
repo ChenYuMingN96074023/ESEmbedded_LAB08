@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "reg.h"
+#include "blink.h"
 
 void init_usart1(void)
 {
@@ -52,6 +53,8 @@ void init_usart1(void)
 	SET_BIT(USART1_BASE + USART_CR1_OFFSET, TE_BIT);
     //set RE
 	SET_BIT(USART1_BASE + USART_CR1_OFFSET, RE_BIT);
+	//set RXNEIE
+    SET_BIT(USART1_BASE + USART_CR1_OFFSET, RXNEIE_BIT);
 
 }
 
@@ -81,16 +84,32 @@ int main(void)
 	while (*hello != '\0')
 		usart1_send_char(*hello++);
 
+    
+    
+	//set NVIC
+    SET_BIT(NVIC_ISER_BASE + NVIC_ISERn_OFFSET(1), 5);
+    blink(LED_BLUE);
+	
+}
 
-	//receive char and resend it
-	char ch;
-	while (1)
-	{
-		ch = usart1_receive_char();
+void usart1_handler(void){
+    //receive the char and echo to screen
+	if(READ_BIT(USART1_BASE + USART_SR_OFFSET, RXNE_BIT)==1){
+		char ch = usart1_receive_char();
 
 		if (ch == '\r')
 			usart1_send_char('\n');
 
 		usart1_send_char(ch);
 	}
+    
+	//handling overrun_error??
+    if(READ_BIT(USART1_BASE + USART_SR_OFFSET, ORE_BIT)==1){
+		char *ORE = "ORE fault!!\r\n";
+
+	
+		while (*ORE != '\0')
+			usart1_send_char(*ORE++);
+	}
+
 }
